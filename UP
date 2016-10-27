@@ -1,0 +1,26 @@
+#!/bin/sh
+set -eu
+
+GITLAB_HOST="$(grep '"host": "' ~/.private_token.json | awk '{print $2}' | cut -d '"' -f 2)"
+
+grep -v ^# REPOS | while read repo
+do
+	group="${repo%%/*}"
+	project="${repo##*/}"
+	dir="${group}/${project}"
+	echo "\033[0;32msync ${dir}\033[0;0m"
+	if [ ! -d "${dir}" ]
+	then
+		mkdir -p "${dir}"
+		cd "${dir}" > /dev/null
+		git clone "git@${GITLAB_HOST}:${group}/${project}.git" .
+		cd - > /dev/null
+	else
+		cd "${dir}" > /dev/null
+		git pull
+		[ -n "$(git cherry)" ] && git push
+		cd - > /dev/null
+	fi
+done
+
+echo "\033[1;33mdone\033[0;0m"
